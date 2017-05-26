@@ -4,7 +4,7 @@
 #include "PID.h"
 #include <math.h>
 
-// for convenience
+// For convenience
 using json = nlohmann::json;
 
 // For converting back and forth between radians and degrees.
@@ -33,7 +33,10 @@ int main()
   uWS::Hub h;
 
   PID pid;
-  // TODO: Initialize the pid variable.
+  // Initialize the pid variable.
+  // ** Inputs below can be tuned **
+  // Implement Twiddle here to optimize?
+  pid.Init(0.2, 0.004, 3.0);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -51,19 +54,22 @@ int main()
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
           double steer_value;
-          /*
-          * TODO: Calcuate steering value here, remember the steering value is
-          * [-1, 1].
-          * NOTE: Feel free to play around with the throttle and speed. Maybe use
-          * another PID controller to control the speed!
-          */
+          
+          // Update error values with cte
+          pid.UpdateError(cte);
+          
+          // Calculate steering value (returns between [-1, 1])
+          steer_value = pid.TotalError();
           
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          // Setting throttle with same PID controller as steering
+          // Formula below switches to between [0, 1], larger error means less throttle
+          // Currently also divided by 2 for safety reasons
+          msgJson["throttle"] = (1 - std::abs(steer_value)) / 2;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);

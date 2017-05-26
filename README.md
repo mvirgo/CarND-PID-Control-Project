@@ -3,6 +3,19 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
+#### Completed Steps
+* Implement PID Controller for Steering
+* Implement PID Controller for Throttle
+
+#### Upcoming Steps
+* Optimize Init paramaters (potentially through Twiddle implementation)
+* Assess max safe speed for vehicle to stay on track
+* Take video of the car driving for inclusion in the ReadMe
+* Add project reflection
+* Clean up ReadMe
+
+**This project is in progress. The below ReadMe is from Udacity's original repository and will be updated as get further along with the project.**
+
 ## Dependencies
 
 * cmake >= 3.5
