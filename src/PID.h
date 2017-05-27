@@ -16,6 +16,11 @@ public:
   double Kp;
   double Ki;
   double Kd;
+  
+  /*
+  * Iterations
+  */
+  int iter;
 
   /*
   * Constructor
@@ -36,6 +41,11 @@ public:
   * Update the PID error variables given cross track error.
   */
   void UpdateError(double cte);
+  
+  /*
+  * Tweaks the PID coefficients/weights for better driving.
+  */
+  void TweakK(float learn_rate, double cte);
 
   /*
   * Calculate the total PID error.
