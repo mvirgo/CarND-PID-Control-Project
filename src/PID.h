@@ -21,7 +21,13 @@ public:
   * Iterations
   */
   int iter;
-
+  
+  /*
+  * Twiddle values
+  */
+  std::vector <double> p;
+  std::vector <double> dp;
+  
   /*
   * Constructor
   */
@@ -45,12 +51,12 @@ public:
   /*
   * Tweaks the PID coefficients/weights for better driving.
   */
-  void TweakK(float learn_rate, double cte);
+  void Twiddle(double tolerance);
 
   /*
   * Calculate the total PID error.
   */
-  double TotalError();
+  double TotalError(double p_coeff, double i_coeff, double d_coeff);
 };
 
 #endif /* PID_H */

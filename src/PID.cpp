@@ -1,3 +1,6 @@
+#include <vector>
+#include <iostream>
+#include <cmath>
 #include "PID.h"
 
 /*
@@ -23,6 +26,15 @@ void PID::Init(double Kp_, double Ki_, double Kd_) {
   // Initialize iterations for tweaking coefficients below.
   iter = 0;
   
+  // Re-size Twiddle vectors
+  p.resize(3);
+  dp.resize(3);
+  
+  // Initialize Twiddle dp values
+  dp[0] = 1.0;
+  dp[1] = 1.0;
+  dp[2] = 1.0;
+  
 }
 
 void PID::UpdateError(double cte) {
@@ -42,26 +54,12 @@ void PID::UpdateError(double cte) {
   // i_error is the sum of ctes to this point
   i_error += cte;
   
-  // Set train_flag to true to increase changes in PID coefficients/weights
-  bool train_flag = false;
-  
-  if (train_flag == true) {
-    // If training, only use first 1000 iterations
-    if (iter < 1000) {
-      // Higher learning rate when training
-      TweakK(0.001, cte);
-    }
-  } else {
-    // Lower learning rate for test run, just makes very small tweaks
-    TweakK(0.0001, cte);
-  }
-  
-  // Raise number of iterations so that training can cut off
+  // Raise number of iterations so that Twiddle can cut off
   iter += 1;
   
 }
 
-void PID::TweakK(float learn_rate, double cte) {
+void PID::Twiddle(double tolerance) {
   /*
   * These tweak the PID coefficients/weights based on the CTE.
   * Note: If the training flag is set to "True" in UpdateWeights,
@@ -70,17 +68,51 @@ void PID::TweakK(float learn_rate, double cte) {
   * driving behavior.
   */
   
-  // Ki gets a special equation because it goes haywire with the other
-  Kp -= learn_rate * cte;
-  Ki += (learn_rate * cte) / i_error;
-  Kd -= learn_rate * cte;
+  double angle = std::abs(TotalError(Kp, Ki, Kd));
+  // Kp is cte, which is currently the best error
+  double best_err = Kp;
+  double err;
   
+  p[0] = Kp;
+  p[1] = Ki;
+  p[2] = Kd;
+  
+  // Twiddle loop
+  while ((dp[0]+dp[1]+dp[2]) > tolerance) {
+    for (int i = 0; i < p.size(); ++i) {
+      p[i] += dp[i];
+      err = std::abs(TotalError(p[0], p[1], p[2]));
+      if (err < best_err) {
+        best_err = err;
+        dp[i] *= 1.1;
+      } else {
+        p[i] -= 2 * dp[i];
+        err = std::abs(TotalError(p[0], p[1], p[2]));
+        if (err < best_err) {
+          best_err = err;
+          dp[i] *= 1.05;
+        } else {
+          p[i] += dp[i];
+          dp[i] *= 0.95;
+        } // end inner if/else
+      } // end outer if/else
+    } // end for loop
+  } // end while loop
+              
+  Kp = p[0];
+  Ki = p[1];
+  Kd = p[2];
+  
+  //dp[0] = 1.0;
+  //dp[1] = 1.0;
+  //dp[2] = 1.0;
+
 }
 
-double PID::TotalError() {
+double PID::TotalError(double p_coeff, double i_coeff, double d_coeff) {
   
   // Return the total error of each coefficient multiplied by the respective error
-  return -Kp * p_error - Kd * d_error - Ki * i_error;
+  return -p_coeff * p_error - d_coeff * d_error - i_coeff * i_error;
   
 }
 
