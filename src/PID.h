@@ -51,7 +51,7 @@ public:
   /*
   * Tweaks the PID coefficients/weights for better driving.
   */
-  void Twiddle(double tolerance);
+  void Twiddle(double tolerance, double angle);
 
   /*
   * Calculate the total PID error.

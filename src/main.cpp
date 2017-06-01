@@ -58,30 +58,29 @@ int main()
           pid.UpdateError(cte);
           
           // Twiddle
-          if ((pid.iter > 200) && (pid.iter < 250)) {
-            pid.Twiddle(1e-10);
+          // Note that the angle I use within for predicting cte needs to be in degrees
+          angle = rad2deg(angle);
+          // Skip the first 50 iterations as the car is slightly off-center at start
+          // End Twiddle updates after 150 iterations (i.e. before the curve)
+          if ((pid.iter > 50) && (pid.iter < 150)) {
+            pid.Twiddle(1e-10, angle);
           }
           
-          // Calculate steering value (returns between [-1, 1])
+          // Calculate steering value (if reasonable error, returns between [-1, 1])
           steer_value = pid.TotalError(pid.Kp, pid.Ki, pid.Kd);
           
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
           std::cout << "Kp: " << pid.Kp << " Ki: " << pid.Ki << " Kd: " << pid.Kd << std::endl;
           std::cout << "Iterations: " << pid.iter << std::endl;
-          std::cout << "Dp values: " << pid.dp[0] << " " << pid.dp[1] << " " << pid.dp[2] << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           // Setting throttle with same PID controller as steering
           // Formula below switches to between [0, 1], larger steering angle means less throttle
-          // Currently also divided by 2 for safety reasons
-          if (pid.iter < 200) {
-            msgJson["throttle"] = 0.2;
-          } else {
-            msgJson["throttle"] = (1 - std::abs(steer_value));
-          }
-          
+          // Multiplied by 0.8 for safety reasons
+          msgJson["throttle"] = (1 - std::abs(steer_value)) * 0.8;
+
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);

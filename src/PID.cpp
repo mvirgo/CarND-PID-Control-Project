@@ -5,7 +5,7 @@
 
 /*
 * Initialize PID control, update the cross-track error, update PID
-* coefficients, and calculate the total error (steering angle).
+* coefficients, Twiddle, and calculate the total error (steering angle).
 */
 
 PID::PID() {}
@@ -30,82 +30,102 @@ void PID::Init(double Kp_, double Ki_, double Kd_) {
   p.resize(3);
   dp.resize(3);
   
-  // Initialize Twiddle dp values
-  dp[0] = 1.0;
-  dp[1] = 1.0;
-  dp[2] = 1.0;
+  // Initialize Twiddle dp values - normalized to be similar to coefficients
+  dp[0] = Kp * 0.1;
+  dp[1] = Ki * 0.1;
+  dp[2] = Kd * 0.1;
   
 }
 
 void PID::UpdateError(double cte) {
   /*
-  * Updates error values for calculating total error below. Also, updates
-  * the error coefficients/weights based on whether full training is being
-  * done or a test run.
-  * Please note that it is advised to only do the training
-  * on a single coefficient at a time, as the car will likely
-  * otherwise run off the track.
+  * Updates error values for calculating total error below.
   */
   
   // d_error is difference from old cte (p_error) to the new cte
-  d_error = cte - p_error;
+  d_error = (cte - p_error);
   // p_error gets set to the new cte
   p_error = cte;
   // i_error is the sum of ctes to this point
   i_error += cte;
   
-  // Raise number of iterations so that Twiddle can cut off
+  // Raise number of iterations so that Twiddle can start & cut off approproately
   iter += 1;
   
 }
 
-void PID::Twiddle(double tolerance) {
+void PID::Twiddle(double tolerance, double angle) {
   /*
-  * These tweak the PID coefficients/weights based on the CTE.
-  * Note: If the training flag is set to "True" in UpdateWeights,
-  * please comment out two of the coefficients to tweak only one
-  * at once. Doing all three simultaneously can cause very eratic
-  * driving behavior.
+  * These tweak the PID coefficients/weights based on the Total Error & a predicted CTE.
   */
   
-  double angle = std::abs(TotalError(Kp, Ki, Kd));
-  // Kp is cte, which is currently the best error
-  double best_err = Kp;
+  // Best error starts at current total error
+  double best_err = std::abs(TotalError(Kp, Ki, Kd));
+  // Best CTE starts at p_error, which is CTE (see UpdateError above)
+  double best_cte = p_error;
+  // Y = rho * sin(angle), whereby CTE is Y and we solve for rho for the cte prediction below
+  double rho = p_error / sin(angle);
+  // Other desired variables
   double err;
+  double err_deg;
+  double new_cte;
   
+  // Set each p value to the PID coefficients
   p[0] = Kp;
   p[1] = Ki;
   p[2] = Kd;
   
   // Twiddle loop
-  while ((dp[0]+dp[1]+dp[2]) > tolerance) {
+  while ((std::abs(dp[0])+std::abs(dp[1])+std::abs(dp[2])) > tolerance) {
+    // For each p value
     for (int i = 0; i < p.size(); ++i) {
       p[i] += dp[i];
+      // Error is the turn rate
       err = std::abs(TotalError(p[0], p[1], p[2]));
-      if (err < best_err) {
+      // Change to degrees
+      err_deg = err * (180 / M_PI);
+      // Predict CTE
+      new_cte = best_cte + (rho * sin(err_deg));
+      if ((std::abs(new_cte) < std::abs(best_cte)) && (std::abs(err) < std::abs(best_err))) {
+        // If better than previous for both CTE and total error, change best values and expand the search further
+        best_cte = new_cte;
         best_err = err;
         dp[i] *= 1.1;
       } else {
+        // Flip the search in the opposite direction
         p[i] -= 2 * dp[i];
         err = std::abs(TotalError(p[0], p[1], p[2]));
-        if (err < best_err) {
+        err_deg = err * (180 / M_PI);
+        new_cte = best_cte+ (rho * sin(err_deg));
+        if ((std::abs(new_cte) < std::abs(best_cte)) && (std::abs(err) < std::abs(best_err))) {
+          best_cte = new_cte;
           best_err = err;
-          dp[i] *= 1.05;
+          dp[i] *= 1.1;
         } else {
+          // Shrink the search if nothing better found
           p[i] += dp[i];
-          dp[i] *= 0.95;
-        } // end inner if/else
-      } // end outer if/else
-    } // end for loop
-  } // end while loop
-              
+          dp[i] *= 0.9;
+        }   // end inner if/else
+      }   // end outer if/else
+    }   // end for loop
+  }   // end while loop
+  
+  // Negative coefficients would jack up the steering calculation, so force positive
+  for (int z = 0; z < p.size(); ++z) {
+    if (p[z] < 0.0) {
+      p[z] = std::abs(p[z]);
+    }
+  }
+  
+  // Change class error coefficients to the p values from above after Twiddle loop
   Kp = p[0];
   Ki = p[1];
   Kd = p[2];
   
-  //dp[0] = 1.0;
-  //dp[1] = 1.0;
-  //dp[2] = 1.0;
+  // Reset the dp values to be used again for another iteration
+  dp[0] = Kp * 0.1;
+  dp[1] = Ki * 0.1;
+  dp[2] = Kd * 0.1;
 
 }
 
