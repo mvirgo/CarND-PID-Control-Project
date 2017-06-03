@@ -7,11 +7,10 @@ Udacity SDCND Term 2, Project 4
 #### Completed Steps
 * Implement PID Controller for Steering
 * Implement PID Controller for Throttle
+* Optimized init paramaters & assessed max safe throttle for the vehicle
+* Took video of the car driving
 
 #### Upcoming Steps
-* Optimize Init paramaters (potentially through Twiddle implementation)
-* Assess max safe speed for vehicle to stay on track
-* Take video of the car driving for inclusion in the ReadMe
 * Add project reflection
 * Clean up ReadMe
 
