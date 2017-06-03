@@ -18,17 +18,6 @@ public:
   double Kd;
   
   /*
-  * Iterations
-  */
-  int iter;
-  
-  /*
-  * Twiddle values
-  */
-  std::vector <double> p;
-  std::vector <double> dp;
-  
-  /*
   * Constructor
   */
   PID();
@@ -47,16 +36,11 @@ public:
   * Update the PID error variables given cross track error.
   */
   void UpdateError(double cte);
-  
-  /*
-  * Tweaks the PID coefficients/weights for better driving.
-  */
-  void Twiddle(double tolerance, double angle);
 
   /*
   * Calculate the total PID error.
   */
-  double TotalError(double p_coeff, double i_coeff, double d_coeff);
+  double TotalError();
 };
 
 #endif /* PID_H */

@@ -2,7 +2,6 @@
 #include <iostream>
 #include "json.hpp"
 #include "PID.h"
-#include <math.h>
 
 // For convenience
 using json = nlohmann::json;
@@ -57,29 +56,18 @@ int main()
           // Update error values with cte
           pid.UpdateError(cte);
           
-          // Twiddle
-          // Note that the angle I use within for predicting cte needs to be in degrees
-          angle = rad2deg(angle);
-          // Skip the first 50 iterations as the car is slightly off-center at start
-          // End Twiddle updates after 150 iterations (i.e. before the curve)
-          if ((pid.iter > 50) && (pid.iter < 150)) {
-            pid.Twiddle(1e-10, angle);
-          }
-          
           // Calculate steering value (if reasonable error, returns between [-1, 1])
-          steer_value = pid.TotalError(pid.Kp, pid.Ki, pid.Kd);
+          steer_value = pid.TotalError();
           
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
-          std::cout << "Kp: " << pid.Kp << " Ki: " << pid.Ki << " Kd: " << pid.Kd << std::endl;
-          std::cout << "Iterations: " << pid.iter << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           // Setting throttle with same PID controller as steering
           // Formula below switches to between [0, 1], larger steering angle means less throttle
-          // Multiplied by 0.8 for safety reasons
-          msgJson["throttle"] = (1 - std::abs(steer_value)) * 0.8;
+          // Multiplied by 0.5 for safety reasons
+          msgJson["throttle"] = (1 - std::abs(steer_value)) * 0.5 + 0.2;
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
